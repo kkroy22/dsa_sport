@@ -1,0 +1,14 @@
+[package]
+name = "dsa_sport"
+version = "0.0.2"
+authors = ["Kiran Kumar Roy <kkroy22@gmail.com>"]
+edition = "2018"
+license = "GPL-3.0"
+readme = "README.md"
+repository = "https://github.com/kkroy22/dsa_sport"
+description = """
+Chasing Pointers for basic data storage templates
+"""
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
