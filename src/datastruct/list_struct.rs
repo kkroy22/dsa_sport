@@ -16,7 +16,7 @@
 //! list.add_node(1);
 //! list.add_node(2);
 //! list.add_node(3);
-//! assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> x"));
+//! assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪✘"));
 //! assert_eq!(list.len(), 3);
 //! ```
 //!
@@ -24,6 +24,11 @@
 use core::mem;
 use core::ptr;
 use std::alloc;
+
+const LEFT: &str = "⎩";
+const PHI: &str = "✘";   
+const RIGHT: &str = "⎭";
+const LINK: &str = "↪";
 
 pub struct LinkedList<T> {
     head: *mut Member<T>,
@@ -198,9 +203,9 @@ where
     /// list.add_node(1);
     /// list.add_node(2);
     /// list.add_node(3);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪✘"));
     /// list.insert_node_at(1, 4);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 4 -> 2 -> 3 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩4⎭↪⎩2⎭↪⎩3⎭↪✘"));
     /// ```
     pub fn insert_node_at(&mut self, index: usize, element: T) {
         let mut node = Member::new(element);
@@ -243,9 +248,9 @@ where
     /// list.add_node(1);
     /// list.add_node(2);
     /// list.add_node(3);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪✘"));
     /// list.delete_node_at(1);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 3 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩3⎭↪✘"));
     /// ```
     pub fn delete_node_at(&mut self, index: usize) {
         let align = mem::align_of::<Member<T>>();
@@ -291,9 +296,9 @@ where
     /// list.add_node(1);
     /// list.add_node(2);
     /// list.add_node(3);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪✘"));
     /// list.swape_nodes(0, 2);
-    /// assert_eq!(format!("{:?}",list), format!("3 -> 2 -> 1 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩3⎭↪⎩2⎭↪⎩1⎭↪✘"));
     /// ```
     pub fn swape_nodes(&mut self, i: usize, j: usize) {
         if i == j {
@@ -354,9 +359,9 @@ where
     /// list.add_node(3);
     /// list.add_node(4);
     /// list.add_node(4);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 2 -> 3 -> 4 -> 4 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩2⎭↪⎩3⎭↪⎩4⎭↪⎩4⎭↪✘"));
     /// list.eliminate_dup();
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> 4 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪⎩4⎭↪✘"));
     /// ```
     pub fn eliminate_dup(&mut self)
     where
@@ -467,9 +472,9 @@ where
     /// list.add_node(3);
     /// list.add_node(4);
     /// list.add_node(5);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> 4 -> 5 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪⎩4⎭↪⎩5⎭↪✘"));
     /// list.reverse_iterative();
-    /// assert_eq!(format!("{:?}",list), format!("5 -> 4 -> 3 -> 2 -> 1 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩5⎭↪⎩4⎭↪⎩3⎭↪⎩2⎭↪⎩1⎭↪✘"));
     /// ```
     pub fn reverse_iterative(&mut self) {
         let mut prev = ptr::null_mut() as *mut Member<T>;
@@ -501,9 +506,9 @@ where
     /// list.add_node(3);
     /// list.add_node(4);
     /// list.add_node(5);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> 4 -> 5 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪⎩4⎭↪⎩5⎭↪✘"));
     /// list.activate_kejriwal();
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 3 -> 5 -> 2 -> 4 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩3⎭↪⎩5⎭↪⎩2⎭↪⎩4⎭↪✘"));
     /// ```
     /// # Errors
     /// this function needs the type to be `LinkedList<i32>` only
@@ -583,9 +588,9 @@ where
     /// list.add_node(3);
     /// list.add_node(4);
     /// list.add_node(5);
-    /// assert_eq!(format!("{:?}",list), format!("1 -> 2 -> 3 -> 4 -> 5 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩1⎭↪⎩2⎭↪⎩3⎭↪⎩4⎭↪⎩5⎭↪✘"));
     /// list.rotate_from_k(2);
-    /// assert_eq!(format!("{:?}",list), format!("4 -> 5 -> 1 -> 2 -> 3 -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩4⎭↪⎩5⎭↪⎩1⎭↪⎩2⎭↪⎩3⎭↪✘"));
     /// ```
     pub fn rotate_from_k(&mut self, last_n: usize) {
         let size = self.rec_len();
@@ -641,7 +646,7 @@ where
     /// list.add_node("bcd");
     /// list.add_node("bac");
     /// list.bubble_sort();
-    /// assert_eq!(format!("{:?}",list), format!("\"aad\" -> \"abc\" -> \"abd\" -> \"bac\" -> \"bcd\" -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩\"aad\"⎭↪⎩\"abc\"⎭↪⎩\"abd\"⎭↪⎩\"bac\"⎭↪⎩\"bcd\"⎭↪✘"));
     /// ```
     pub fn bubble_sort(&mut self) {
         for _ in 0..self.len() {
@@ -681,7 +686,7 @@ where
     /// list.add_node("bcd");
     /// list.add_node("bac");
     /// list.bubble_sort();
-    /// assert_eq!(format!("{:?}",list), format!("\"aad\" -> \"abc\" -> \"abd\" -> \"bac\" -> \"bcd\" -> x"));
+    /// assert_eq!(format!("{:?}",list), format!("⎩\"aad\"⎭↪⎩\"abc\"⎭↪⎩\"abd\"⎭↪⎩\"bac\"⎭↪⎩\"bcd\"⎭↪✘"));
     /// ```
     pub fn merge_sort(&mut self)
     where
@@ -853,20 +858,20 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut out = String::new();
         if self.head.is_null() {
-            out += "x";
+            out += PHI;
         } else {
             let mut current_node = &self.head;
             unsafe {
-                out += &format!("{:?} -> ", (*(*current_node)).data);
+                out += &format!("{}{:?}{}{}", LEFT, (*(*current_node)).data, RIGHT, LINK);
             }
             loop {
                 unsafe {
                     if (*(*current_node)).next.is_null() {
-                        out += "x";
+                        out += PHI;
                         break;
                     }
                     current_node = &(*(*current_node)).next;
-                    out += &format!("{:?} -> ", (*(*current_node)).data);
+                    out += &format!("{}{:?}{}{}", LEFT, (*(*current_node)).data, RIGHT, LINK);
                 }
             }
         }

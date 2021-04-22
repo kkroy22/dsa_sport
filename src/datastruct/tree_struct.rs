@@ -1,4 +1,6 @@
-//! minimal tree structure formula for tree type sada storage functionality
+//! minimal tree structure written `Tree<T>`
+//!
+//! formula for tree type sada storage functionality
 //! it is implemented as n type tree and support any general case of tree like bst
 //! # Example
 //! ```
@@ -119,7 +121,7 @@ impl Tree<String> {
         }
         let node = unsafe { &(*root) };
         for i in 0..states.len() {
-            out.push_str(states.get(i).expect("beyond index capacity"));
+            out.push_str(states[i]);
         }
         out.push_str(&format!("{}\n", node.data));
         if states[states.len() - 1] == CORNER {

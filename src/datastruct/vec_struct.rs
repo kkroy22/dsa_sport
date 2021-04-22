@@ -9,19 +9,25 @@
 //! ```rust
 //! use dsa_sport::datastruct::vec_struct::Vector;
 //! let mut v: Vector<char> = Vector::new();
-//! assert_eq!(format!("{}", v), "⎩∅⎭");
+//! assert_eq!(format!("{}", v), "▅");
 //! v.push_back('A');
 //! v.push_back('B');
 //! v.push_back('C');
-//! assert_eq!(format!("{}", v), "⎩A⎭⎩B⎭⎩C⎭");
+//! assert_eq!(format!("{}", v), "⎩A⎭⎩B⎭⎩C⎭⎩▅⎭");
 //! ```
 use core::mem;
+use core::ops::Index;
 use core::ptr;
 use std::alloc;
-use core::ops::Index;
+
+const LEFT: &str = "⎩";
+const PHI: &str = "▅";
+const RIGHT: &str = "⎭";
 
 pub struct Vector<T> {
     pointer: *mut T,
+    front: Option<usize>,
+    back: Option<usize>,
     length: usize,
     capacity: usize,
 }
@@ -36,6 +42,8 @@ impl<T> Vector<T> {
     pub fn new() -> Self {
         Self {
             pointer: ptr::null_mut(),
+            front: None,
+            back: None,
             length: 0,
             capacity: 0,
         }
@@ -59,10 +67,6 @@ impl<T> Vector<T> {
     /// let mut v: Vector<char> = Vector::new();
     /// assert_eq!(v.capacity(), 0);
     /// v.push_back('A');
-    /// assert_eq!(v.capacity(), 1);
-    /// v.push_back('B');
-    /// assert_eq!(v.capacity(), 2);
-    /// v.push_back('C');
     /// assert_eq!(v.capacity(), 4);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -99,49 +103,123 @@ impl<T> Vector<T> {
     /// let mut v: Vector<char> = Vector::new();
     /// v.push_back('A');
     /// v.push_back('B');
-    /// v.push_back('C');
-    /// v.push_back('D');
     /// ```
     pub fn push_back(&mut self, element: T) {
         let size = mem::size_of::<T>();
         if size == 0 {
             panic!("Size of element must be non zero");
         }
+        let align = mem::align_of::<T>();
 
         if self.pointer.is_null() {
-            let align = mem::align_of::<T>();
+            let vec_capacity = 4;
+            let vec_size = size * vec_capacity;
             let vec_ptr = unsafe {
-                let layout = alloc::Layout::from_size_align_unchecked(size, align);
-                let ptr = alloc::alloc(layout) as *mut T;
-                ptr.write(element);
-                ptr
+                let layout = alloc::Layout::from_size_align_unchecked(vec_size, align);
+                let raw_ptr = alloc::alloc(layout) as *mut T;
+                raw_ptr.write(element);
+                raw_ptr
             };
             self.pointer = vec_ptr;
+            self.front = Some(0);
+            self.back = Some(0);
             self.length += 1;
-            self.capacity += 1;
+            self.capacity = vec_capacity;
         } else if self.length < self.capacity {
+            let next_index = {
+                match self.back {
+                    Some(back) => {
+                        let next_index = back + 1;
+                        if next_index < self.capacity {
+                            next_index
+                        } else {
+                            next_index % self.capacity
+                        }
+                    }
+                    None => 0,
+                }
+            };
             unsafe {
-                self.pointer.add(self.length).write(element);
+                self.pointer.add(next_index).write(element);
             }
+            if let None = self.front {
+                self.front = Some(0);
+            }
+            self.back = Some(next_index);
             self.length += 1;
         } else {
             if let Some(new_capacity) = self.capacity.checked_mul(2) {
-                let old_vec_size = size * self.capacity;
-                let new_vec_size = size * new_capacity;
-                let align = mem::align_of::<T>();
-                let vec_ptr = unsafe {
-                    let layout = alloc::Layout::from_size_align_unchecked(old_vec_size, align);
-                    let ptr =
-                        alloc::realloc(self.pointer as *mut u8, layout, new_vec_size) as *mut T;
-                    ptr.add(self.length).write(element);
-                    ptr
-                };
-                self.pointer = vec_ptr;
-                self.length += 1;
-                self.capacity = new_capacity;
+                if let Some(front) = self.front {
+                    let old_vec_size = size * self.capacity;
+                    let new_vec_size = size * new_capacity;
+                    let vec_ptr = unsafe {
+                        let old_layout =
+                            alloc::Layout::from_size_align_unchecked(old_vec_size, align);
+                        let new_layout =
+                            alloc::Layout::from_size_align_unchecked(new_vec_size, align);
+                        let raw_ptr = alloc::alloc(new_layout) as *mut T;
+                        if front == 0 {
+                            ptr::copy_nonoverlapping(self.pointer, raw_ptr, self.capacity);
+                        } else {
+                            let part_size = self.capacity - front;
+                            ptr::copy_nonoverlapping(
+                                self.pointer.offset(front as isize),
+                                raw_ptr,
+                                part_size,
+                            );
+                            ptr::copy_nonoverlapping(
+                                self.pointer,
+                                raw_ptr.offset(part_size as isize),
+                                self.capacity - part_size,
+                            );
+                        }
+                        raw_ptr.add(self.length).write(element);
+                        alloc::dealloc(self.pointer as *mut u8, old_layout);
+                        raw_ptr
+                    };
+                    self.pointer = vec_ptr;
+                    self.front = Some(0);
+                    self.back = Some(self.length);
+                    self.length += 1;
+                    self.capacity = new_capacity;
+                }
             } else {
                 panic!("usize vector capacity reached its limit");
             }
+        }
+    }
+
+    /// # Examples
+    /// ```rust
+    /// use dsa_sport::datastruct::vec_struct::Vector;
+    /// let mut v: Vector<char> = Vector::new();
+    /// v.push_back('B');
+    /// v.push_back('C');
+    /// v.push_back('D');
+    /// assert_eq!(v.pop_front(), Some('B'));
+    /// assert_eq!(v.pop_front(), Some('C'));
+    /// assert_eq!(v.pop_front(), Some('D'));
+    /// assert_eq!(v.pop_front(), None);
+    /// assert_eq!(v.len(), 0);
+    /// assert_eq!(v.capacity(), 4);
+    /// v.push_back('A');
+    /// assert_eq!(v.pop_front(), Some('A'));
+    /// assert_eq!(v.len(), 0);
+    /// assert_eq!(v.capacity(), 4);
+    /// ```
+    pub fn pop_front(&mut self) -> Option<T> {
+        if !self.pointer.is_null() && self.length > 0 {
+            match self.front {
+                Some(front_ixd) => {
+                    let item = unsafe { self.pointer.add(front_ixd).read() };
+                    self.front = Some((front_ixd + 1) % self.capacity);
+                    self.length -= 1;
+                    return Some(item);
+                }
+                None => return None,
+            }
+        } else {
+            return None;
         }
     }
 
@@ -165,21 +243,23 @@ impl<T> Vector<T> {
     /// ```
     pub fn pop_back(&mut self) -> Option<T> {
         if !self.pointer.is_null() && self.length > 0 {
-            let item = unsafe { self.pointer.add(self.length - 1).read() };
-            self.length -= 1;
-            return Some(item);
-        } else {
-            return None;
-        }
-    }
-
-    pub fn pop_front(&mut self) -> Option<T> {
-        todo!()
-    }
-
-    pub fn get(&self, index: usize) -> Option<&T> {
-        if !self.pointer.is_null() && self.length > 0 {
-            return unsafe {self.pointer.add(index).as_ref()};
+            match self.back {
+                Some(back_ixd) => {
+                    let item = unsafe { self.pointer.add(back_ixd).read() };
+                    if back_ixd > 0 {
+                        self.back = back_ixd.checked_sub(1);
+                    } else {
+                        self.back = self.capacity.checked_sub(1);
+                    }
+                    self.length -= 1;
+                    if self.length == 0 {
+                        self.front = None;
+                        self.back = None;
+                    }
+                    return Some(item);
+                }
+                None => return None,
+            }
         } else {
             return None;
         }
@@ -201,9 +281,30 @@ impl<T> Vector<T> {
     where
         T: std::fmt::Display,
     {
-        for i in 0..self.length {
-            unsafe {
-                out.push_str(&format!("⎩{}⎭", self.pointer.add(i).read()));
+        let mut total_offset = self.capacity;
+        let mut total_index = self.length;
+        if let Some(mut offset) = self.front {
+            while total_index > 0 {
+                unsafe {
+                    out.push_str(&format!(
+                        "{}{}{}",
+                        LEFT,
+                        self.pointer.add(offset).read(),
+                        RIGHT
+                    ));
+                }
+                offset = (offset + 1) % self.capacity;
+                total_index -= 1;
+                total_offset -= 1;
+            }
+            while total_offset > 0 {
+                out.push_str(&format!("{}{}{}", LEFT, PHI, RIGHT));
+                total_offset -= 1;
+            }
+        } else {
+            while total_offset > 0 {
+                out.push_str(&format!("{}{}{}", LEFT, PHI, RIGHT));
+                total_offset -= 1;
             }
         }
     }
@@ -216,10 +317,44 @@ impl<T> Vector<T> {
             "Length = {} Capacity = {} -> ",
             self.length, self.capacity
         ));
-        for i in 0..self.length {
-            unsafe {
-                out.push_str(&format!("⎩{:?}⎭", self.pointer.add(i).read()));
+        let mut total_offset = self.capacity;
+        let mut total_index = self.length;
+        if let Some(mut offset) = self.front {
+            while total_index > 0 {
+                unsafe {
+                    out.push_str(&format!(
+                        "{}{:?}{}",
+                        LEFT,
+                        self.pointer.add(offset).read(),
+                        RIGHT
+                    ));
+                }
+                offset = (offset + 1) % self.capacity;
+                total_index -= 1;
+                total_offset -= 1;
             }
+            while total_offset > 0 {
+                out.push_str(&format!("{}{}{}", LEFT, PHI, RIGHT));
+                total_offset -= 1;
+            }
+        } else {
+            while total_offset > 0 {
+                out.push_str(&format!("{}{}{}", LEFT, PHI, RIGHT));
+                total_offset -= 1;
+            }
+        }
+    }
+
+    fn get(&self, index: usize) -> Option<&T> {
+        if !self.pointer.is_null() && self.length > 0 && index < self.length {
+            if let Some(mut front_ixd) = self.front {
+                front_ixd = (front_ixd + index) % self.capacity;
+                return unsafe { self.pointer.add(front_ixd).as_ref() };
+            } else {
+                return None;
+            }
+        } else {
+            return None;
         }
     }
 }
@@ -239,7 +374,7 @@ where
         if !self.pointer.is_null() {
             self.prety_print(&mut out);
         } else {
-            out.push_str("⎩∅⎭");
+            out.push_str(&format!("{}", PHI));
         }
         write!(f, "{}", out)
     }
@@ -254,7 +389,7 @@ where
         if !self.pointer.is_null() {
             self.vec_debug(&mut out);
         } else {
-            out.push_str("⎩∅⎭");
+            out.push_str(&format!("{}", PHI));
         }
         write!(f, "{}", out)
     }
