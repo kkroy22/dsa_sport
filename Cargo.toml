@@ -1,0 +1,20 @@
+[package]
+name = "dsa_sport"
+version = "0.0.2"
+authors = ["Kiran Kumar Roy <kkroy22@gmail.com>"]
+edition = "2018"
+license = "GPL-3.0"
+readme = "README.md"
+repository = "https://github.com/kkroy22/dsa_sport"
+description = """
+Under Graduate level basic data storage templates in rust
+"""
+
+[[example]]
+name = "play_stack"
+[[example]]
+name = "play_queue"
+[[example]]
+name = "play_list"
+[[example]]
+name = "play_tree"
