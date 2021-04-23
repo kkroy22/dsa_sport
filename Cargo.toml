@@ -9,3 +9,12 @@ repository = "https://github.com/kkroy22/dsa_sport"
 description = """
 Under Graduate level basic data storage templates in rust
 """
+
+[[example]]
+name = "play_stack"
+[[example]]
+name = "play_queue"
+[[example]]
+name = "play_list"
+[[example]]
+name = "play_tree"

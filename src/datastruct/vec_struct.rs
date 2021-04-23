@@ -104,6 +104,8 @@ impl<T> Vector<T> {
     /// v.push_back('A');
     /// v.push_back('B');
     /// ```
+    /// #safety
+    /// * The computed offset, `in bytes`, cannot overflow an isize.
     pub fn push_back(&mut self, element: T) {
         let size = mem::size_of::<T>();
         if size == 0 {
@@ -148,30 +150,21 @@ impl<T> Vector<T> {
             self.back = Some(next_index);
             self.length += 1;
         } else {
-            if let Some(new_capacity) = self.capacity.checked_mul(2) {
+            if let Some(new_capacity) = (self.capacity as isize).checked_mul(2) {
+                let new_capacity = new_capacity as usize;
                 if let Some(front) = self.front {
                     let old_vec_size = size * self.capacity;
                     let new_vec_size = size * new_capacity;
                     let vec_ptr = unsafe {
-                        let old_layout =
-                            alloc::Layout::from_size_align_unchecked(old_vec_size, align);
-                        let new_layout =
-                            alloc::Layout::from_size_align_unchecked(new_vec_size, align);
+                        let old_layout = alloc::Layout::from_size_align_unchecked(old_vec_size, align);
+                        let new_layout = alloc::Layout::from_size_align_unchecked(new_vec_size, align);
                         let raw_ptr = alloc::alloc(new_layout) as *mut T;
                         if front == 0 {
                             ptr::copy_nonoverlapping(self.pointer, raw_ptr, self.capacity);
                         } else {
                             let part_size = self.capacity - front;
-                            ptr::copy_nonoverlapping(
-                                self.pointer.offset(front as isize),
-                                raw_ptr,
-                                part_size,
-                            );
-                            ptr::copy_nonoverlapping(
-                                self.pointer,
-                                raw_ptr.offset(part_size as isize),
-                                self.capacity - part_size,
-                            );
+                            ptr::copy_nonoverlapping(self.pointer.offset(front as isize), raw_ptr, part_size);
+                            ptr::copy_nonoverlapping(self.pointer, raw_ptr.offset(part_size as isize), self.capacity - part_size);
                         }
                         raw_ptr.add(self.length).write(element);
                         alloc::dealloc(self.pointer as *mut u8, old_layout);
@@ -193,27 +186,23 @@ impl<T> Vector<T> {
     /// ```rust
     /// use dsa_sport::datastruct::vec_struct::Vector;
     /// let mut v: Vector<char> = Vector::new();
+    /// v.push_back('A');
     /// v.push_back('B');
     /// v.push_back('C');
-    /// v.push_back('D');
-    /// assert_eq!(v.pop_front(), Some('B'));
-    /// assert_eq!(v.pop_front(), Some('C'));
-    /// assert_eq!(v.pop_front(), Some('D'));
-    /// assert_eq!(v.pop_front(), None);
-    /// assert_eq!(v.len(), 0);
-    /// assert_eq!(v.capacity(), 4);
-    /// v.push_back('A');
     /// assert_eq!(v.pop_front(), Some('A'));
-    /// assert_eq!(v.len(), 0);
-    /// assert_eq!(v.capacity(), 4);
+    /// assert_eq!(v.pop_front(), Some('B'));
     /// ```
     pub fn pop_front(&mut self) -> Option<T> {
         if !self.pointer.is_null() && self.length > 0 {
             match self.front {
-                Some(front_ixd) => {
-                    let item = unsafe { self.pointer.add(front_ixd).read() };
-                    self.front = Some((front_ixd + 1) % self.capacity);
+                Some(front_idx) => {
+                    let item = unsafe { self.pointer.add(front_idx).read() };
+                    self.front = Some((front_idx + 1) % self.capacity);
                     self.length -= 1;
+                    if self.length == 0 {
+                        self.front = None;
+                        self.back = None;
+                    }
                     return Some(item);
                 }
                 None => return None,
@@ -227,27 +216,19 @@ impl<T> Vector<T> {
     /// ```rust
     /// use dsa_sport::datastruct::vec_struct::Vector;
     /// let mut v: Vector<char> = Vector::new();
+    /// v.push_back('A');
     /// v.push_back('B');
     /// v.push_back('C');
-    /// v.push_back('D');
-    /// assert_eq!(v.pop_back(), Some('D'));
     /// assert_eq!(v.pop_back(), Some('C'));
     /// assert_eq!(v.pop_back(), Some('B'));
-    /// assert_eq!(v.pop_back(), None);
-    /// assert_eq!(v.len(), 0);
-    /// assert_eq!(v.capacity(), 4);
-    /// v.push_back('A');
-    /// assert_eq!(v.pop_back(), Some('A'));
-    /// assert_eq!(v.len(), 0);
-    /// assert_eq!(v.capacity(), 4);
     /// ```
     pub fn pop_back(&mut self) -> Option<T> {
         if !self.pointer.is_null() && self.length > 0 {
             match self.back {
-                Some(back_ixd) => {
-                    let item = unsafe { self.pointer.add(back_ixd).read() };
-                    if back_ixd > 0 {
-                        self.back = back_ixd.checked_sub(1);
+                Some(back_idx) => {
+                    let item = unsafe { self.pointer.add(back_idx).read() };
+                    if back_idx > 0 {
+                        self.back = back_idx.checked_sub(1);
                     } else {
                         self.back = self.capacity.checked_sub(1);
                     }
