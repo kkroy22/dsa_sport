@@ -16,8 +16,9 @@
 //! assert_eq!(format!("{}", v), "⎩A⎭⎩B⎭⎩C⎭⎩▅⎭");
 //! ```
 use core::mem;
-use core::ops::Index;
 use core::ptr;
+use core::ops::Index;
+use core::ops::IndexMut;
 use std::alloc;
 
 const LEFT: &str = "⎩";
@@ -59,18 +60,6 @@ impl<T> Vector<T> {
     /// ```
     pub fn len(&self) -> usize {
         return self.length;
-    }
-
-    /// # Examples
-    /// ```rust
-    /// use dsa_sport::datastruct::vec_struct::Vector;
-    /// let mut v: Vector<char> = Vector::new();
-    /// assert_eq!(v.capacity(), 0);
-    /// v.push_back('A');
-    /// assert_eq!(v.capacity(), 4);
-    /// ```
-    pub fn capacity(&self) -> usize {
-        return self.capacity;
     }
 
     /// # Examples
@@ -290,47 +279,24 @@ impl<T> Vector<T> {
         }
     }
 
-    fn vec_debug(&self, out: &mut String)
-    where
-        T: std::fmt::Debug,
-    {
-        out.push_str(&format!(
-            "Length = {} Capacity = {} -> ",
-            self.length, self.capacity
-        ));
-        let mut total_offset = self.capacity;
-        let mut total_index = self.length;
-        if let Some(mut offset) = self.front {
-            while total_index > 0 {
-                unsafe {
-                    out.push_str(&format!(
-                        "{}{:?}{}",
-                        LEFT,
-                        self.pointer.add(offset).read(),
-                        RIGHT
-                    ));
-                }
-                offset = (offset + 1) % self.capacity;
-                total_index -= 1;
-                total_offset -= 1;
-            }
-            while total_offset > 0 {
-                out.push_str(&format!("{}{}{}", LEFT, PHI, RIGHT));
-                total_offset -= 1;
-            }
-        } else {
-            while total_offset > 0 {
-                out.push_str(&format!("{}{}{}", LEFT, PHI, RIGHT));
-                total_offset -= 1;
-            }
-        }
-    }
-
     fn get(&self, index: usize) -> Option<&T> {
         if !self.pointer.is_null() && self.length > 0 && index < self.length {
             if let Some(mut front_ixd) = self.front {
                 front_ixd = (front_ixd + index) % self.capacity;
                 return unsafe { self.pointer.add(front_ixd).as_ref() };
+            } else {
+                return None;
+            }
+        } else {
+            return None;
+        }
+    }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        if !self.pointer.is_null() && self.length > 0 && index < self.length {
+            if let Some(mut front_ixd) = self.front {
+                front_ixd = (front_ixd + index) % self.capacity;
+                return unsafe { self.pointer.add(front_ixd).as_mut() };
             } else {
                 return None;
             }
@@ -361,25 +327,16 @@ where
     }
 }
 
-impl<T> std::fmt::Debug for Vector<T>
-where
-    T: std::fmt::Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut out = String::new();
-        if !self.pointer.is_null() {
-            self.vec_debug(&mut out);
-        } else {
-            out.push_str(&format!("{}", PHI));
-        }
-        write!(f, "{}", out)
-    }
-}
-
 impl<T> Index<usize> for Vector<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &T {
         self.get(index).expect("Out of bounds access")
+    }
+}
+
+impl<T> IndexMut<usize> for Vector<T> {
+    fn index_mut(&mut self, index: usize) -> &mut T {
+        self.get_mut(index).expect("Out of bounds access")
     }
 }
