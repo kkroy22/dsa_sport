@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cargo make --makefile Makefile.toml ccc

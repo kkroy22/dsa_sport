@@ -340,3 +340,12 @@ impl<T> IndexMut<usize> for Vector<T> {
         self.get_mut(index).expect("Out of bounds access")
     }
 }
+
+#[test]
+fn empty_vector() {
+    let mut v: Vector<isize> = Vector::new();
+    
+    v.push_back(1);
+    assert!(!v.is_empty());
+
+}
